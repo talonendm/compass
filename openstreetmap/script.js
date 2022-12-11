@@ -50,7 +50,11 @@ function toggleLocation() {
 
 function setup() {
     // create the canvas for the map
-    var canvas = createCanvas(800, 600);
+    //var canvas = createCanvas(800, 600);
+
+// Create a full-screen canvas
+var canvas = createCanvas(windowWidth, windowHeight);
+
     canvas.parent('map');
   
     // see package: https://leafletjs.com/download.html
