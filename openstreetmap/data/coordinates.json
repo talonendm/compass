@@ -1,0 +1,12 @@
+[{"id":"5-test","name":"SameSame - but different",
+"location_type":"restautant",
+"street":"i","city":"Helsinki","state":"Finland",
+"country":"Finland",
+"longitude":24.9353396,"latitude":60.1579363,
+"website_url":"http://www.ei.com","updated_at":"2022-12-11T15:07:58.723Z",
+"created_at":"2022-12-11T05:03:53.733Z"},
+{"id":"6-Sekel","name":"Sekel",
+"location_type":"restaurant","street":"ei","address_2":null,"address_3":null,
+"city":"Helsinki","country":"Finland",
+"longitude":24.9360868,"latitude":60.1649511,"website_url":"https://restaurantsekel.com",
+"updated_at":"2022-12-11T05:07:58.723Z","created_at":"2022-12-11T05:07:58.723Z"}] 
