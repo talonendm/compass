@@ -53,7 +53,18 @@ function setup() {
     //var canvas = createCanvas(800, 600);
 
 // Create a full-screen canvas
-var canvas = createCanvas(windowWidth, windowHeight);
+
+   if (windowHeight > windowWidth) {
+    var vahennaleveys = windowWidth - 0;
+    var vahennakorkeus = windowHeight - 200;
+    console.log("levea");
+   } else {
+    var vahennaleveys = windowWidth - 200;
+    var vahennakorkeus = windowHeight - 0;
+   }
+
+
+var canvas = createCanvas(vahennaleveys, vahennakorkeus);
 
     canvas.parent('map');
   
@@ -68,10 +79,10 @@ var canvas = createCanvas(windowWidth, windowHeight);
     //}).addTo(map);
 
 // Create a button to enable/disable location
-locationButton = createButton('Enable Location');
-locationButton.position(10, 10);
+//locationButton = createButton('Enable Location');
+//locationButton.position(10, 10);
 // Attach the toggleLocation function as a callback for the button
-locationButton.mousePressed(toggleLocation);
+//locationButton.mousePressed(toggleLocation);
 
 
     // Get the user's GPS location
