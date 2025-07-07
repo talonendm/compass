@@ -23,11 +23,11 @@ html, body {
 }
 
 #locate-btn {
-  top: 10px;
+  bottom: 10px;
 }
 
 #track-btn {
-  top: 50px;
+  bottom: 50px;
 }
 
 .popup-content {
