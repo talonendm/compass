@@ -1,9 +1,11 @@
-latitude,longitude,title,infotext,link
+latitude,longitude,title,infotext,link,color
 48.3538426,11.781021,Munchen Airport,"Munich Airport",https://en.wikipedia.org/wiki/Munich_Airport,orange
-47.8028488,13.0263032,Salzburg, "Saltzburg, Austria", https://en.wikipedia.org/wiki/Salzburg,red
-47.1237278,12.8305816,Edelweißspitze,"Edelweiss Peak, Austria", https://en.wikipedia.org/wiki/Edelwei%C3%9Fspitze,green
-47.1109843,12.8322047,FAT Mankei restaurant,"FAT Mankei Restaurant, Austria", https://www.fatmankei.com/,yellow
+47.8028488,13.0263032,Salzburg, "Saltzburg Austria", https://en.wikipedia.org/wiki/Salzburg,red
+47.1237278,12.8305816,Edelweißspitze,"Edelweiss Peak Austria", https://en.wikipedia.org/wiki/Edelwei%C3%9Fspitze,green
+47.1109843,12.8322047,FAT Mankei restaurant,"FAT Mankei Restaurant Austria", https://www.fatmankei.com/,yellow
 47.0250037,12.8371203,Jungfernsprung, "Jungfernsprung",https://www.jungfernsprung.at/,green
-46.8270407,12.7525945,Dolomitenbad Freibad Lienz,"Outdoor Pool Lienz and bathing area at the lake Tristacher See open daily from 9 AM to 8 PM, due to weather conditions.",https://www.dolomitenbad.at/en/,blue
-47.1396097,9.5220357,Vaduz Castle,"Vaduz Castle, Liechtenstein",https://cillamariatravel.fi/onko-liechtensteinin-minivaltio-kaymisen-arvoinen/,red
+46.8270407,12.7525945,Dolomitenbad Freibad Lienz,"Outdoor Pool Lienz and bathing area at the lake Tristacher See open daily from 9 AM to 8 PM due to weather conditions.",https://www.dolomitenbad.at/en/,blue
+47.1396097,9.5220357,Vaduz Castle,"Vaduz Castle Liechtenstein",https://cillamariatravel.fi/onko-liechtensteinin-minivaltio-kaymisen-arvoinen/,red
 45.9780413,8.9169199,Monte San Salvatore,"Kauas näkyvä vuorenhuippu, jossa on vuoristokylä, upeita järvimaisemia, vaellusreittejä ja köysirata",https://www.montesansalvatore.ch/en/,red
+45.9545942,8.7311956,Monte Tamaro, "1 962 metrin korkeuteen kohoava vuori, joka on Alppien aluskukkuloiden korkein huippu Luganon alueella",https://www.myswitzerland.com/en/experiences/monte-tamaro/, green
+

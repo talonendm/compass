@@ -21,14 +21,14 @@ const topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 
 });
 
 const iconColors = {
-  red: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  green: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
-  blue: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+  red:    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  green:  "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+  blue:   "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
   orange: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png",
   yellow: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png",
   violet: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png",
-  grey: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png",
-  black: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png"
+  grey:   "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png",
+  black:  "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png"
 };
 
 const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png";
@@ -55,7 +55,7 @@ Papa.parse("markers.csv", {
   header: true,
   complete: function(results) {
     const data = results.data.filter(row => row.latitude && row.longitude);
-    
+
     if (data.length > 0) {
       const first = data[0];
       map.setView([parseFloat(first.latitude), parseFloat(first.longitude)], 8);
@@ -64,26 +64,29 @@ Papa.parse("markers.csv", {
     data.forEach(row => {
       const lat = parseFloat(row.latitude);
       const lon = parseFloat(row.longitude);
-      const color = (row.color || "blue").toLowerCase();
+      const color = (row.color || 'blue').toLowerCase();
       const iconUrl = iconColors[color] || iconColors.blue;
 
       const icon = L.icon({
-        iconUrl: iconUrl,
+        iconUrl,
+        shadowUrl,
         iconSize: [25, 41],
         iconAnchor: [12, 41],
         popupAnchor: [1, -34],
-        shadowUrl: shadowUrl,
         shadowSize: [41, 41],
         shadowAnchor: [12, 41]
       });
 
       const marker = L.marker([lat, lon], { icon }).addTo(map);
 
+      const safeLink = row.link.replace(/"/g, '&quot;'); // Prevent quote-breaking HTML
       const popupContent = `
         <div class="popup-content">
           <strong>${row.title}</strong><br/>
           <p>${row.infotext}</p>
-          <button onclick="window.open('${row.link}', '_blank')">More Info</button>
+          <a href="${safeLink}" target="_blank" rel="noopener">
+            <button>More Info</button>
+          </a>
         </div>
       `;
       marker.bindPopup(popupContent);
