@@ -115,6 +115,21 @@ document.getElementById('locate-btn').addEventListener('click', () => {
   );
 });
 
+
+ // Then add the GeoJSON route
+  fetch('route250805saksa.geojson')
+    .then(res => res.json())
+    .then(data => {
+      const routeLayer = L.geoJSON(data, {
+        style: {
+          color: 'red',
+          weight: 3
+        }
+      }).addTo(map);
+
+      map.fitBounds(routeLayer.getBounds());
+    });
+
 // Track Me button (continuous location)
 let tracking = false;
 let watchId = null;
