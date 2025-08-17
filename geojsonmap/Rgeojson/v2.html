@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>GeoJSON Route Hover Effect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        #map { height: 100vh; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    var map = L.map('map').setView([60.922049, 23.370297], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    fetch('all_routes.geojson')
+        .then(response => response.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: {
+                    color: 'blue',
+                    weight: 4,
+                    opacity: 0.7
+                },
+                onEachFeature: function (feature, layer) {
+                    // Hover effect to make path thicker
+                    layer.on('mouseover', function(e) {
+                        layer.setStyle({
+                            weight: 8,
+                            color: 'red'
+                        });
+                        layer.bindTooltip("Distance: " + feature.properties.distance.toFixed(2) + " km").openTooltip();
+                    });
+                    layer.on('mouseout', function(e) {
+                        layer.setStyle({
+                            weight: 4,
+                            color: 'blue'
+                        });
+                        layer.closeTooltip();
+                    });
+                }
+            }).addTo(map);
+
+            map.fitBounds(L.geoJSON(data).getBounds());
+        })
+        .catch(err => console.error(err));
+</script>
+
+</body>
+</html>

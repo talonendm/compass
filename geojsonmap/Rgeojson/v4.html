@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Interactive GeoJSON Route Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        #coordsBox {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: sans-serif;
+            font-weight: bold;
+            z-index: 1000;
+            cursor: text;
+            /* shows text selection cursor */
+        }
+
+        #locate-btn,
+        #track-btn {
+            position: absolute;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 6px 12px;
+            border: 1px solid #aaa;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #locate-btn {
+            bottom: 10px;
+        }
+
+        #track-btn {
+            bottom: 50px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="map"></div>
+    <div id="coordsBox">Click on the map to see coordinates</div>
+
+    <button id="locate-btn">Locate Me</button>
+    <button id="track-btn">Track Me</button>
+
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+
+        // Define base layers
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        });
+
+        var osmFI = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors, © MapTiler'
+        });
+
+        var esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
+            'World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18,
+            attribution: 'Tiles © Esri & contributors'
+        });
+
+        var satellite = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: '© OpenTopoMap'
+        });
+
+        var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: '© OpenTopoMap'
+        });
+
+        // Initialize map with Finnish OSM
+        var map = L.map('map', { layers: [osmFI] }).setView([60.922049, 23.370297], 14);
+
+        // Layer selection control
+        var baseMaps = {
+            "OpenStreetMapFI": osmFI,
+            "esriSat": esriSat,
+            "OpenStreetMap": osm,
+            "Satellite": satellite,
+            "Topo": topo
+        };
+
+        L.control.layers(baseMaps).addTo(map);
+
+        // Route color by type
+        function getRouteColor(type) {
+            switch (type) {
+                case 'driving': return 'gray';
+                case 'tractor': return 'purple';
+                case 'walking': return 'green';
+                case 'cycling': return 'brown';
+                case 'ferry': return 'blue';
+                default: return 'black';
+            }
+        }
+
+        // Track Me button (continuous location)
+        let tracking = false;
+        let watchId = null;
+        let userMarker = null;
+
+        // Locate Me button (one-time location)
+        document.getElementById('locate-btn').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert("Geolocation not supported.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    map.setView([lat, lon], 13);
+                    L.marker([lat, lon]).addTo(map).bindPopup("📍 You are here").openPopup();
+                },
+                () => {
+                    alert("Unable to get location.");
+                }
+            );
+        });
+
+
+        document.getElementById('track-btn').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert("Geolocation not supported.");
+                return;
+            }
+
+            if (!tracking) {
+                watchId = navigator.geolocation.watchPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+
+                        if (userMarker) {
+                            userMarker.setLatLng([lat, lon]);
+                        } else {
+                            userMarker = L.marker([lat, lon]).addTo(map).bindPopup("📍 Tracking...");
+                        }
+
+                        map.setView([lat, lon], 14);
+                    },
+                    error => {
+                        alert("Tracking failed: " + error.message);
+                    }
+                );
+
+                tracking = true;
+                document.getElementById('track-btn').textContent = "⏹ Stop Tracking";
+            } else {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                tracking = false;
+                document.getElementById('track-btn').textContent = "🔄 Track Me";
+
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                    userMarker = null;
+                }
+            }
+        });
+
+
+        fetch('all_routes.geojson')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        return {
+                            color: getRouteColor(feature.properties.realroute || 'driving'),
+                            weight: 4,
+                            opacity: 0.7
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on('mouseover', function () {
+                            layer.setStyle({ weight: 8, opacity: 1 });
+                            layer.bindTooltip(
+                                "Route ID: " + feature.properties.route_id +
+                                "<br>Distance: " + feature.properties.distance.toFixed(2) + " km",
+                                { sticky: true } // tooltip follows the mouse
+                            );
+
+                        });
+                        layer.on('mouseout', function () {
+                            layer.setStyle({
+                                weight: 4,
+                                color: getRouteColor(feature.properties.realroute || 'driving'),
+                                opacity: 0.7
+                            });
+                            layer.closeTooltip();
+                        });
+                    }
+                }).addTo(map);
+            });
+
+        // Show lat,lon in bottom-right box
+        map.on('click', function (e) {
+            var coords = e.latlng;
+            document.getElementById('coordsBox').innerText =
+                coords.lat.toFixed(6) + "," + coords.lng.toFixed(6);
+        });
+
+
+
+        // Flag to keep track of whether location is enabled
+        var locationEnabled = false;
+
+        // Function to handle a click on the location button
+        function toggleLocation() {
+            if (locationEnabled) {
+                // Disable location and update the button text
+                locationEnabled = false;
+                locationButton.html('Enable Location');
+            } else {
+                // Enable location and update the button text
+                locationEnabled = true;
+                locationButton.html('Disable Location');
+
+                // Get the current position and log it to the console
+                getCurrentPosition(function (position) {
+                    console.log(position);
+                });
+            }
+        }
+
+
+    </script>
+
+</body>
+
+</html>

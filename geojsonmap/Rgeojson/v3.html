@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Interactive GeoJSON Route Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        html, body { height: 100%; margin: 0; }
+        #map { height: 100%; width: 100%; }
+        #coordsBox {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: sans-serif;
+            z-index: 1000;
+            font-weight: bold;
+            pointer-events: none; /* allows map interaction through the box */
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="coordsBox">Click on the map to see coordinates</div>
+
+<script>
+    var map = L.map('map').setView([60.922049, 23.370297], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Define route colors by type
+    function getRouteColor(type) {
+        switch(type) {
+            case 'driving': return 'gray';
+            case 'walking': return 'green';
+            case 'cycling': return 'brown';
+            default: return 'blue';
+        }
+    }
+
+    fetch('all_routes.geojson')
+        .then(res => res.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: function(feature) {
+                    return {
+                        color: getRouteColor(feature.properties.type || 'driving'),
+                        weight: 4,
+                        opacity: 0.7
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.on('mouseover', function() {
+                        layer.setStyle({ weight: 8, opacity: 1 });
+                        layer.bindTooltip("Distance: " + feature.properties.distance.toFixed(2) + " km").openTooltip();
+                    });
+                    layer.on('mouseout', function() {
+                        layer.setStyle({
+                            weight: 4,
+                            color: getRouteColor(feature.properties.type || 'driving'),
+                            opacity: 0.7
+                        });
+                        layer.closeTooltip();
+                    });
+                }
+            }).addTo(map);
+        });
+
+    // Show lat,lon in coordsBox on click
+    map.on('click', function(e) {
+        var coords = e.latlng;
+        document.getElementById('coordsBox').innerText =
+            coords.lat.toFixed(6) + "," + coords.lng.toFixed(6);
+    });
+</script>
+
+</body>
+</html>

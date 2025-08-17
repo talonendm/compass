@@ -1,4 +1,6 @@
 // Base map layers
+// git push git@github-talonendm:talonendm/compass.git
+
 const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 });
