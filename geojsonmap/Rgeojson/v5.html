@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Geolocation Tracker</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+  <style>
+    #map { height: 400px; width: 100%; margin-bottom: 10px; }
+    #coordsBox { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="coordsBox">Click on the map to see coordinates</div>
+
+  <button id="locate-btn">Locate Me</button>
+  <button id="track-btn">Track Me</button>
+  <button id="save-csv-btn">Save CSV</button>
+
+  <script>
+    // Initialize map
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Click on map shows coordinates
+    map.on('click', e => {
+      document.getElementById('coordsBox').innerText =
+        `Lat: ${e.latlng.lat}, Lon: ${e.latlng.lng}`;
+    });
+
+    let tracking = false;
+    let watchId = null;
+    let trackedData = [];
+    let markers = [];
+    let polyline = L.polyline([], { color: 'red' }).addTo(map);
+
+    // Track Me button
+    document.getElementById("track-btn").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocation not supported.");
+        return;
+      }
+
+      if (!tracking) {
+        tracking = true;
+        document.getElementById("track-btn").innerText = "Stop Tracking";
+
+        watchId = navigator.geolocation.watchPosition(
+          pos => {
+            const record = {
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              speed: pos.coords.speed,
+              heading: pos.coords.heading,
+              timestamp: new Date(pos.timestamp).toISOString()
+            };
+            trackedData.push(record);
+            console.log("Tracked:", record);
+
+            // Update map
+            const marker = L.marker([record.lat, record.lon]).addTo(map);
+            markers.push(marker);
+            polyline.addLatLng([record.lat, record.lon]);
+            map.setView([record.lat, record.lon], 16);
+          },
+          err => console.error("Tracking error:", err),
+          { enableHighAccuracy: true }
+        );
+      } else {
+        tracking = false;
+        document.getElementById("track-btn").innerText = "Track Me";
+        navigator.geolocation.clearWatch(watchId);
+      }
+    });
+
+    // Locate Me button
+    document.getElementById("locate-btn").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocation not supported.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        map.setView([lat, lon], 16);
+        L.marker([lat, lon]).addTo(map)
+          .bindPopup("You are here").openPopup();
+      });
+    });
+
+    // Save CSV
+    document.getElementById("save-csv-btn").addEventListener("click", () => {
+      if (trackedData.length === 0) {
+        alert("No data to save.");
+        return;
+      }
+
+      let csv = "lat,lon,accuracy,speed,heading,timestamp\n";
+      trackedData.forEach(r => {
+        csv += `${r.lat},${r.lon},${r.accuracy},${r.speed},${r.heading},${r.timestamp}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tracked_data.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
