@@ -1,108 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Matkatallennus</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<style>
-html, body { height: 100%; margin: 0; }
-#map { height: 100%; width: 100%; }
-#coordsBox {
-  position: absolute; bottom: 10px; right: 10px;
-  background: rgba(255,255,255,0.9); padding: 6px 12px;
-  border-radius: 4px; font-family: sans-serif; font-weight: bold;
-  z-index: 1000; cursor: text;
-}
-#locate-btn, #track-btn {
-  position: absolute; left: 10px; z-index: 1000;
-  background: white; padding: 6px 12px;
-  border: 1px solid #aaa; border-radius: 6px; cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-#locate-btn { bottom: 10px; }
-#track-btn { bottom: 50px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geolocation Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { height: 100%; }
+    .control-panel {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .control-panel input {
+      padding: 6px;
+      font-size: 14px;
+      width: 120px;
+    }
+    .control-panel button {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <div class="control-panel">
+    <input type="text" id="session-name" value="tallennus" />
+    <button id="locate-btn">Locate Me</button>
+    <button id="track-btn">Start Tracking</button>
+    <button id="save-csv-btn">Save CSV</button>
+  </div>
 
-<div id="map"></div>
-<div id="coordsBox">Click map for coords</div>
-<button id="locate-btn">Locate Me</button>
-<button id="track-btn">Start Tracking</button>
+  <div id="map"></div>
 
-<script>
-/* ---------------- Map ---------------- */
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  maxZoom: 19, attribution:'© OpenStreetMap'
-});
-var map = L.map('map', { layers:[osm] }).setView([60.922049, 23.370297], 14);
-L.control.layers({ "OSM": osm }).addTo(map);
+  <script>
+    // Session initialization
+    const sessionNameInput = document.getElementById("session-name");
+    let sessionName = sessionNameInput.value;
+    const sessionId = new Date().toISOString();
+    let userIp = 'Unknown';
 
-/* ---------------- Coordinates box ---------------- */
-map.on('click', e=>{
-  document.getElementById('coordsBox').innerText =
-    e.latlng.lat.toFixed(6) + "," + e.latlng.lng.toFixed(6);
-});
+    // Fetch user IP
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => userIp = data.ip)
+      .catch(err => console.error("IP fetch error:", err));
 
-/* ---------------- Locate button ---------------- */
-document.getElementById('locate-btn').addEventListener('click', ()=>{
-  if(!navigator.geolocation){ alert("Not supported"); return;}
-  navigator.geolocation.getCurrentPosition(
-    pos=>{
-      const lat=pos.coords.latitude, lon=pos.coords.longitude;
-      map.setView([lat,lon],14);
-      L.marker([lat,lon]).addTo(map).bindPopup("📍 You are here").openPopup();
-    },
-    ()=>alert("Unable to get location")
-  );
-});
+    // Initialize map
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-/* ---------------- Tracking ---------------- */
-let sessionId = 1;   // voidaan kasvattaa myöhemmin
-let userId = prompt("Enter user ID:") || "anonymous";
-let userIP = null;
-fetch("https://api.ipify.org?format=json")
-  .then(res=>res.json()).then(d=>userIP=d.ip);
+    // Data storage
+    const trackedData = [];
+    const polyline = L.polyline([], { color: 'red', weight: 3 }).addTo(map);
+    let tracking = false;
+    let watchId = null;
+    let lastRecorded = null; // Last point added to CSV
 
-// only for ta.dm
-const SHEET_URL = "https://script.google.com/macros/s/AKfycby23Qwfr2W6GbHr8plNspphNZCODaCMIU7-eCc3bSYHNlLZteeEv9V6l2hDFob0-DVtkw/exec";
-let watchId = null;
+    // Function to calculate distance (meters) between two lat/lon points
+    function distanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // Earth radius in meters
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
 
-function logPosition(position){
-  const payload = {
-    session_id: sessionId,
-    user_id: userId,
-    ip: userIP,
-    timestamp: new Date().toISOString(),
-    lat: position.coords.latitude,
-    lon: position.coords.longitude
-  };
-  fetch(SHEET_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(payload)
-  })
-  .then(res=>console.log("Logged:", payload))
-  .catch(err=>console.error(err));
-}
+    // Locate Me button
+    document.getElementById("locate-btn").addEventListener("click", () => {
+      if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
+      navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude, longitude } = pos.coords;
+        map.setView([latitude, longitude], 16);
+        L.marker([latitude, longitude]).addTo(map).bindPopup("You are here").openPopup();
+      });
+    });
 
-document.getElementById('track-btn').addEventListener('click', ()=>{
-  if(watchId===null){
-    watchId = navigator.geolocation.watchPosition(
-      logPosition, console.error,
-      {enableHighAccuracy:true, maximumAge:0}
-    );
-    document.getElementById('track-btn').innerText="Stop Tracking";
-  } else {
-    navigator.geolocation.clearWatch(watchId);
-    watchId=null;
-    document.getElementById('track-btn').innerText="Start Tracking";
-  }
-});
-</script>
+    // Start/Stop Tracking button
+    document.getElementById("track-btn").addEventListener("click", () => {
+      if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
+
+      if (!tracking) {
+        tracking = true;
+        document.getElementById("track-btn").innerText = "Stop Tracking";
+
+        watchId = navigator.geolocation.watchPosition(pos => {
+          const record = {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            speed: pos.coords.speed,
+            heading: pos.coords.heading,
+            timestamp: new Date(pos.timestamp).toISOString()
+          };
+
+          // Add to polyline always
+          polyline.addLatLng([record.lat, record.lon]);
+
+          // Compute distance to last recorded CSV point
+          let dist = lastRecorded
+            ? distanceMeters(lastRecorded.lat, lastRecorded.lon, record.lat, record.lon)
+            : Infinity;
+
+          // Only record a new CSV row if distance > 20m
+          if (dist > 20) {
+            trackedData.push(record);
+            lastRecorded = record;
+            // Green circle for CSV point
+            L.circleMarker([record.lat, record.lon], { radius: 6, color: 'green' }).addTo(map);
+          } else {
+            // Blue circle for closer points (not saved to CSV)
+            L.circleMarker([record.lat, record.lon], { radius: 4, color: 'blue' }).addTo(map);
+          }
+
+        }, err => console.error("Tracking error:", err), { enableHighAccuracy: true });
+
+      } else {
+        tracking = false;
+        document.getElementById("track-btn").innerText = "Start Tracking";
+        navigator.geolocation.clearWatch(watchId);
+      }
+    });
+
+    // Save CSV button
+    document.getElementById("save-csv-btn").addEventListener("click", () => {
+      if (trackedData.length === 0) { alert("No data to save."); return; }
+
+      sessionName = sessionNameInput.value || "20m";
+
+      const header = "Session ID,Session Name,IP,Lat,Lon,Accuracy,Speed,Heading,Timestamp\n";
+      const rows = trackedData.map(d =>
+        `${sessionId},${sessionName},${userIp},${d.lat},${d.lon},${d.accuracy},${d.speed},${d.heading},${d.timestamp}`
+      );
+      const csv = header + rows.join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${sessionName}_${sessionId}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
 </body>
 </html>
