@@ -98,7 +98,7 @@
         });
 
         // Initialize map with Finnish OSM
-        var map = L.map('map', { layers: [osmFI] }).setView([60.922049, 23.370297], 14);
+        var map = L.map('map', { layers: [osmFI] }).setView([40.922049, 23.370297], 6);
 
         // Layer selection control
         var baseMaps = {
@@ -114,13 +114,14 @@
         // Route color by type
         function getRouteColor(type) {
             switch (type) {
-                case 'driving': return 'gray';
+                case 'driving': return '#222222';
                 case 'tractor': return 'purple';
                 case 'walking': return 'green';
                 case 'cycling': return 'brown';
                 case 'ferry': return 'blue';
                 case 'ferrymanual': return 'blue';
                 case 'cablecar': return 'orange';
+                case 'swimming': return 'white';
                 default: return 'black';
             }
         }

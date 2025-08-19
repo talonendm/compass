@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Matkatallennus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+html, body { height: 100%; margin: 0; }
+#map { height: 100%; width: 100%; }
+#coordsBox {
+  position: absolute; bottom: 10px; right: 10px;
+  background: rgba(255,255,255,0.9); padding: 6px 12px;
+  border-radius: 4px; font-family: sans-serif; font-weight: bold;
+  z-index: 1000; cursor: text;
+}
+#locate-btn, #track-btn {
+  position: absolute; left: 10px; z-index: 1000;
+  background: white; padding: 6px 12px;
+  border: 1px solid #aaa; border-radius: 6px; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+#locate-btn { bottom: 10px; }
+#track-btn { bottom: 50px; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="coordsBox">Click map for coords</div>
+<button id="locate-btn">Locate Me</button>
+<button id="track-btn">Start Tracking</button>
+
+<script>
+/* ---------------- Map ---------------- */
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom: 19, attribution:'© OpenStreetMap'
+});
+var map = L.map('map', { layers:[osm] }).setView([60.922049, 23.370297], 14);
+L.control.layers({ "OSM": osm }).addTo(map);
+
+/* ---------------- Coordinates box ---------------- */
+map.on('click', e=>{
+  document.getElementById('coordsBox').innerText =
+    e.latlng.lat.toFixed(6) + "," + e.latlng.lng.toFixed(6);
+});
+
+/* ---------------- Locate button ---------------- */
+document.getElementById('locate-btn').addEventListener('click', ()=>{
+  if(!navigator.geolocation){ alert("Not supported"); return;}
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const lat=pos.coords.latitude, lon=pos.coords.longitude;
+      map.setView([lat,lon],14);
+      L.marker([lat,lon]).addTo(map).bindPopup("📍 You are here").openPopup();
+    },
+    ()=>alert("Unable to get location")
+  );
+});
+
+/* ---------------- Tracking ---------------- */
+let sessionId = 1;   // voidaan kasvattaa myöhemmin
+let userId = prompt("Enter user ID:") || "anonymous";
+let userIP = null;
+fetch("https://api.ipify.org?format=json")
+  .then(res=>res.json()).then(d=>userIP=d.ip);
+
+// only for ta.dm
+const SHEET_URL = "https://script.google.com/macros/s/AKfycby23Qwfr2W6GbHr8plNspphNZCODaCMIU7-eCc3bSYHNlLZteeEv9V6l2hDFob0-DVtkw/exec";
+let watchId = null;
+
+function logPosition(position){
+  const payload = {
+    session_id: sessionId,
+    user_id: userId,
+    ip: userIP,
+    timestamp: new Date().toISOString(),
+    lat: position.coords.latitude,
+    lon: position.coords.longitude
+  };
+  fetch(SHEET_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload)
+  })
+  .then(res=>console.log("Logged:", payload))
+  .catch(err=>console.error(err));
+}
+
+document.getElementById('track-btn').addEventListener('click', ()=>{
+  if(watchId===null){
+    watchId = navigator.geolocation.watchPosition(
+      logPosition, console.error,
+      {enableHighAccuracy:true, maximumAge:0}
+    );
+    document.getElementById('track-btn').innerText="Stop Tracking";
+  } else {
+    navigator.geolocation.clearWatch(watchId);
+    watchId=null;
+    document.getElementById('track-btn').innerText="Start Tracking";
+  }
+});
+</script>
+</body>
+</html>
