@@ -115,6 +115,7 @@
         function getRouteColor(type) {
             switch (type) {
                 case 'driving': return '#222222';
+                case 'future': return '#555255';
                 case 'tractor': return 'purple';
                 case 'walking': return 'green';
                 case 'cycling': return 'brown';
@@ -199,7 +200,7 @@
                 L.geoJSON(data, {
                     style: function (feature) {
                         return {
-                            color: getRouteColor(feature.properties.realroute || 'driving'),
+                            color: getRouteColor(feature.properties.realroute || 'driving' || 'future'),
                             weight: 4,
                             opacity: 0.7
                         };
@@ -217,7 +218,7 @@
                         layer.on('mouseout', function () {
                             layer.setStyle({
                                 weight: 4,
-                                color: getRouteColor(feature.properties.realroute || 'driving'),
+                                color: getRouteColor(feature.properties.realroute || 'driving'  || 'future'),
                                 opacity: 0.7
                             });
                             layer.closeTooltip();
